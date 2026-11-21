@@ -1,0 +1,79 @@
+# Structure and content checks for a submitted run.
+#
+# Runs on `pull_request` with a read-only token, so checking out the PR head is
+# safe. Nothing from the PR is executed: the validator is taken from the base
+# branch, and participants.yaml is read from the base branch as well.
+
+name: validate-run
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: validate-run-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-run:
+    name: validate-run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out base branch (trusted scripts and registry)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+
+      - name: Check out pull request head (data under test)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependencies
+        run: python3 -m pip install --disable-pip-version-check -q -r base/scripts/requirements.txt
+
+      - name: List files changed by the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh api --paginate "repos/$REPO/pulls/$PR/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)' | sort -u > changed.txt
+          echo "Changed files:"
+          sed 's/^/  /' changed.txt
+
+      - name: Decide whether this is an organizer PR
+        id: who
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          organizer=$(python3 -c 'import sys,yaml; print(yaml.safe_load(open(sys.argv[1]))["organizer"]["github"])' base/participants.yaml)
+          if [ "$AUTHOR" = "$organizer" ]; then
+            echo "Pull request author $AUTHOR is the organizer; files outside runs/ are allowed."
+            echo "flag=--allow-any-files" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate
+        run: |
+          # Trusted code from the base branch, untrusted data from the PR head.
+          python3 -I base/scripts/validate_run.py \
+            --changed-files changed.txt \
+            --registry base/participants.yaml \
+            --runs-root head/runs \
+            ${{ steps.who.outputs.flag }}

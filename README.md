@@ -25,9 +25,17 @@ You need to be a collaborator on this repository (the organizer invites every at
    - `run.yaml`, described below;
    - `logs/`, holding the raw log files;
    - optionally `README.md` with correlation notes in prose.
-3. Open a pull request. The template asks you to tick the submitter's attestation box. Tick it only if the statement is true for your organization's part(s).
-4. Wait for the checks. `validate-run` checks the structure; `attestations-complete` tracks who still needs to attest. The bot posts one summary comment on the PR and keeps it up to date.
-5. Fix anything the checks report by pushing to your branch. Note that a new push resets every attestation, so try to get the content right before asking others to attest.
+3. Run the validator locally. It's the same script the pull request check runs, so a run that passes here passes `validate-run`:
+
+   ```
+   python3 -m pip install -r scripts/requirements.txt
+   python3 scripts/validate_run.py runs/<run-id>
+   ```
+
+   It checks the structure of `run.yaml`, that every slug and implementation id is in the registry, that the roles and claims fit the flow, that every log file is listed and is plain text, that nothing looks like an unredacted secret, and that log timestamps fall inside `run_window`. Errors block the PR; warnings are for you and the organizer to look at.
+4. Open a pull request. The template asks you to tick the submitter's attestation box. Tick it only if the statement is true for your organization's part(s).
+5. Wait for the checks. `validate-run` repeats the checks above and also confirms the PR touches only your run directory; `attestations-complete` tracks who still needs to attest. The bot posts one summary comment on the PR and keeps it up to date.
+6. Fix anything the checks report by pushing to your branch. Note that a new push resets every attestation, so try to get the content right before asking others to attest.
 
 One pull request covers exactly one run, and it may only touch files under its own `runs/<run-id>/` directory.
 

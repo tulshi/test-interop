@@ -23,6 +23,7 @@ Tick this box only if the statement is true for your organization's part(s) of t
 
 ## Checklist
 
+- [ ] I ran `python3 scripts/validate_run.py runs/<run-id>` locally and it passed.
 - [ ] This PR adds exactly one directory under `runs/` and changes nothing else.
 - [ ] Every file under `logs/` is plain text, listed in `run.yaml`, and has tokens and secrets replaced with `[REDACTED]`.
 - [ ] All timestamps in the logs fall inside `run_window`, and the lines were captured during the run, not reconstructed afterwards.
