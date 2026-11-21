@@ -1,0 +1,8 @@
+# The organizer owns everything. Branch protection requires a code-owner review
+# before merge, so no run, registry change or workflow change lands without the
+# organizer's approval.
+*                   @tulshi
+/participants.yaml  @tulshi
+/.github/           @tulshi
+/scripts/           @tulshi
+/schema/            @tulshi

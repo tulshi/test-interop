@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run.schema.json",
+  "title": "Interop test run",
+  "description": "Structure of runs/<run-id>/run.yaml. Cross-checks against participants.yaml (slugs, implementation ids, role-specific claims) are done by scripts/validate_run.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "flow", "run_window", "submitted_by", "parts", "correlation"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}-(oauth|cimd|ema)-[a-z0-9]+-[a-z0-9]+(-[a-z0-9]+)?-[0-9]+$",
+      "description": "YYYY-MM-DD-<flow>-<org1>-<org2>[-<org3>]-<n>; must equal the directory name"
+    },
+    "flow": { "type": "string", "enum": ["oauth", "cimd", "ema"] },
+    "run_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/utcTimestamp" },
+        "end": { "$ref": "#/$defs/utcTimestamp" }
+      }
+    },
+    "submitted_by": { "$ref": "#/$defs/slug" },
+    "parts": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/part" }
+    },
+    "correlation": {
+      "type": "string",
+      "minLength": 200,
+      "description": "Prose explaining how to match each party's log lines to the others'. Must mention at least one log file by name."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "flow": { "const": "oauth" } } },
+      "then": {
+        "properties": {
+          "parts": {
+            "items": {
+              "properties": {
+                "claims": {
+                  "items": { "enum": ["oprm", "www-authenticate-scope", "scoped-access"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "flow": { "const": "cimd" } } },
+      "then": {
+        "properties": {
+          "parts": {
+            "items": {
+              "properties": {
+                "claims": {
+                  "items": {
+                    "enum": [
+                      "cimd-preregistered", "cimd-redirect-uris", "cimd-jwks-uri", "cimd-jwks",
+                      "grant-code-pkce", "grant-client-credentials",
+                      "auth-private-key-jwt", "auth-mtls", "auth-none-public"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "flow": { "const": "ema" } } },
+      "then": {
+        "properties": {
+          "parts": {
+            "items": {
+              "properties": {
+                "claims": {
+                  "items": { "enum": ["valid-id-jag", "id-jag-resource", "id-jag-scope", "id-jag-sub-id"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+$" },
+    "utcTimestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "description": "ISO 8601 in UTC with a trailing Z"
+    },
+    "logPath": {
+      "type": "string",
+      "pattern": "^logs/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$",
+      "description": "Relative to the run directory; must start with logs/"
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "org", "implementation", "operator", "logs", "log_source", "claims"],
+      "properties": {
+        "role": { "type": "string", "enum": ["mcp-client", "mcp-server", "op", "resource-as", "gateway"] },
+        "org": { "$ref": "#/$defs/slug" },
+        "implementation": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "operator": {
+          "type": "string",
+          "minLength": 2,
+          "not": { "pattern": "@" },
+          "description": "Name of the person who operated this side; not an email address"
+        },
+        "logs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/logPath" }
+        },
+        "log_source": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Where the lines came from, including who exported them if not this organization"
+        },
+        "claims": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "Matrix rows this part's evidence is offered for; may be empty for a part with no row (for example the OAuth OP)"
+        }
+      }
+    }
+  }
+}

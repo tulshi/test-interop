@@ -1,0 +1,71 @@
+# Registry of participating organizations and the GitHub handles authorized to
+# attest for them. Only the organizer edits this file (see .github/CODEOWNERS).
+#
+# TEST DATA. This is the pilot repository. Every organization below is
+# fabricated. scripts/export-clean.sh replaces this file before cutover.
+#
+# Field reference: schema/participants.schema.json
+
+organizer:
+  github: tulshi
+
+organizations:
+  - slug: acme
+    name: Acme Corp (TEST)
+    kind: organization
+    implementations:
+      - id: acme-mcp-client
+        name: Acme Agent Client (TEST)
+        roles: [mcp-client]
+      - id: acme-mcp-server
+        name: Acme Tools Server (TEST)
+        roles: [mcp-server]
+    attesters:
+      - aaronpk
+    contacts: []
+
+  - slug: idpco
+    name: IdP Co (TEST)
+    kind: organization
+    implementations:
+      - id: idpco-op
+        name: IdP Co Identity Provider (TEST)
+        roles: [op]
+    attesters:
+      - tulshi
+    contacts: []
+
+  - slug: asco
+    name: AS Co (TEST)
+    kind: organization
+    implementations:
+      - id: asco-as
+        name: AS Co Authorization Server (TEST)
+        roles: [resource-as]
+      - id: asco-mcp-server
+        name: AS Co Demo MCP Server (TEST)
+        roles: [mcp-server]
+    attesters:
+      - tulshi
+    contacts: []
+
+  - slug: gwco
+    name: Gateway Co (TEST)
+    kind: organization
+    implementations:
+      - id: gwco-gateway
+        name: Gateway Co MCP Gateway (TEST)
+        roles: [gateway]
+    attesters:
+      - aaronpk
+    contacts: []
+
+  # Common tools. They can't attest; a run with a tool as a counterpart is
+  # marked provisional.
+  - slug: inspector
+    name: MCP Inspector
+    kind: tool
+    implementations:
+      - id: mcp-inspector
+        name: MCP Inspector
+        roles: [mcp-client]
