@@ -123,7 +123,9 @@ When every required attestation is in place for the current commit, `attestation
 
 ### Keeping the status up to date
 
-For pull requests from forks, GitHub runs the attestation check with a token that can only write when the trigger is the PR itself or a comment on it. A comment triggers a re-check immediately, so posting `/attest` updates the summary within a minute or two. If a status ever looks stale (for example after a reviewer request fails), anyone can post `/recheck` on the PR.
+The attestation check runs when the PR is opened, updated or has its description edited, and whenever someone posts a comment containing `/attest` or `/recheck`. GitHub approvals don't trigger it and don't count; for pull requests from forks, GitHub only gives a workflow a token that can update the PR when the trigger is the PR itself or a comment on it, which is one of the reasons attestations are comments. If a status ever looks stale, anyone can post `/recheck` on the PR, and the organizer can also re-run the check from the Actions tab.
+
+The bot never runs anything from a pull request. It reads `run.yaml` through the GitHub API as data, and takes the registry and its own code from the `main` branch.
 
 ### Access notes
 

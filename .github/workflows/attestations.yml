@@ -1,0 +1,69 @@
+# Attestation tracking for run submissions.
+#
+# SECURITY: this workflow has a token that can write to the repository, and it
+# runs for pull requests from forks. It must never check out or execute
+# anything from the pull request. It checks out the base branch only (for
+# participants.yaml and scripts/attestations.py) and reads the PR's run.yaml
+# through the API as data, parsed with yaml.safe_load.
+#
+# Triggers:
+#   pull_request_target  PR opened, updated or its description edited
+#   issue_comment        a comment containing `/attest <sha>` or `/recheck`
+#   workflow_dispatch    organizer re-run for a given PR number
+#
+# GitHub approvals are not used as attestations; approvals from fork PRs
+# don't give workflows a write token, and only registered handles may attest.
+
+name: attestations
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+  issues: write
+
+concurrency:
+  group: attestations-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  attestations:
+    name: attestations
+    # For comments, run only on PR comments that carry a command.
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request &&
+       (contains(github.event.comment.body, '/attest') || contains(github.event.comment.body, '/recheck')))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out base branch only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python3 -m pip install --disable-pip-version-check -q -r scripts/requirements.txt
+
+      - name: Compute attestation status
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr }}
+        run: python3 -I scripts/attestations.py
